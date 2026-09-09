@@ -35,7 +35,6 @@ class DataLoader:
         self._workers_done = 0
         self._tracker = MetricsTracker(num_workers)
 
-        # Per-stage timing
         self._stage_times = {
             "io": [],
             "decode": [],
@@ -54,21 +53,16 @@ class DataLoader:
             if self._stop_event.is_set():
                 break
             wm.start_sample()
-
             t0 = time.perf_counter()
             sample = self.dataset[idx]
             t1 = time.perf_counter()
-
             wm.end_sample()
-
             io_time = getattr(self.dataset, '_last_io_time', 0)
             decode_time = getattr(self.dataset, '_last_decode_time', 0)
             preprocess_time = getattr(self.dataset, '_last_preprocess_time', 0)
-
             t2 = time.perf_counter()
             self.staging_queue.put(sample)
             t3 = time.perf_counter()
-
             with self._stage_lock:
                 self._stage_times["io"].append(io_time)
                 self._stage_times["decode"].append(decode_time)
