@@ -1,57 +1,149 @@
 """
-Parquet-backed Dataset. Reads image bytes and labels from a Parquet file.
-Optimized: avoids unnecessary PIL image copies.
+Parquet-backed image Dataset.
+
+Optimized image pipeline:
+    Parquet row
+        -> encoded JPEG bytes
+        -> torchvision decode_jpeg
+        -> resize while still uint8
+        -> return uint8 tensor
+
+Float conversion and normalization are intentionally deferred to
+DataLoader collation so they operate on a whole batch instead of
+individually on every full-resolution image.
 """
-import io
-import time
+
 from typing import Optional, Callable
 
 import torch
-from PIL import Image
-import torchvision.transforms as T
+import torch.nn.functional as F
+import torchvision.io as tvio
 import pyarrow.parquet as pq
 
 
 class ParquetDataset:
-    def __init__(self, parquet_path: str, max_samples: int = None,
-                 transform: Optional[Callable] = None):
+
+    def __init__(
+        self,
+        parquet_path: str,
+        max_samples: int = None,
+        transform: Optional[Callable] = None,
+        image_size=(64, 64),
+    ):
+
         self.parquet_path = parquet_path
         self.transform = transform
+        self.image_size = image_size
 
-        self._table = pq.read_table(parquet_path)
-        self._length = len(self._table)
-        if max_samples:
-            self._length = min(self._length, max_samples)
+        # NOTE:
+        # This is still eager.
+        #
+        # The current benchmark Parquet contains one very large row group,
+        # so efficient random lazy access requires changing the Parquet
+        # layout itself. This remains a separate architectural issue.
+        self._table = pq.read_table(
+            parquet_path
+        )
 
-    def __len__(self) -> int:
+        self._length = len(
+            self._table
+        )
+
+        if max_samples is not None:
+            self._length = min(
+                self._length,
+                max_samples
+            )
+
+
+    def __len__(self):
         return self._length
 
-    def __getitem__(self, index: int):
-        # Stage 1: I/O
-        t0 = time.perf_counter()
-        row = self._table.slice(index, 1).to_pylist()[0]
-        img_bytes = row['image']
-        label = row['label']
-        t1 = time.perf_counter()
 
-        # Stage 2: Decode JPEG (avoid unnecessary convert)
-        img = Image.open(io.BytesIO(img_bytes))
-        if img.mode != 'RGB':
-            img = img.convert('RGB')
-        t2 = time.perf_counter()
+    def __getitem__(
+        self,
+        index: int
+    ):
 
-        # Stage 3: Preprocess (resize + ToTensor)
-        img = img.resize((64, 64))
-        img = T.ToTensor()(img)
-        t3 = time.perf_counter()
+        if (
+            index < 0
+            or index >= self._length
+        ):
+            raise IndexError(
+                f"Index {index} out of range "
+                f"for dataset of size {self._length}"
+            )
 
-        if self.transform:
-            img = self.transform(img)
 
-        # Store timing
-        self._last_io_time = t1 - t0
-        self._last_decode_time = t2 - t1
-        self._last_preprocess_time = t3 - t2
-        self._last_total_time = t3 - t0
+        # ------------------------------------------------------------
+        # 1. Extract encoded JPEG and label
+        # ------------------------------------------------------------
 
-        return img, label
+        row = self._table.slice(
+            index,
+            1
+        ).to_pylist()[0]
+
+        image_bytes = row["image"]
+        label = row["label"]
+
+
+        # ------------------------------------------------------------
+        # 2. Python bytes -> uint8 encoded tensor
+        # ------------------------------------------------------------
+
+        encoded = torch.frombuffer(
+            bytearray(image_bytes),
+            dtype=torch.uint8
+        )
+
+
+        # ------------------------------------------------------------
+        # 3. JPEG decode
+        # ------------------------------------------------------------
+
+        image = tvio.decode_jpeg(
+            encoded,
+            mode=tvio.ImageReadMode.RGB
+        )
+
+
+        # ------------------------------------------------------------
+        # 4. Resize while still uint8
+        #
+        # Experiments showed that converting the original-resolution
+        # image to float BEFORE resize is significantly more expensive.
+        # ------------------------------------------------------------
+
+        if (
+            image.shape[-2:]
+            != tuple(self.image_size)
+        ):
+
+            image = F.interpolate(
+                image.unsqueeze(0),
+                size=self.image_size,
+                mode="bilinear",
+                align_corners=False,
+            ).squeeze(0)
+
+
+        # ------------------------------------------------------------
+        # 5. Optional transform
+        #
+        # Custom transforms may expect normalized float tensors.
+        # Therefore the optimized uint8 path is used when no transform
+        # is supplied. With a transform, convert before applying it.
+        # ------------------------------------------------------------
+
+        if self.transform is not None:
+
+            image = image.float()
+            image.div_(255.0)
+
+            image = self.transform(
+                image
+            )
+
+
+        return image, label
