@@ -28,3 +28,8 @@ checkpoint_*.pth
 /tmp/
 *.swp
 *~
+
+# Python packaging
+build/
+dist/
+*.egg-info/
