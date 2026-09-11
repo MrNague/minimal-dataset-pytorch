@@ -1,107 +1,96 @@
 # Minimal Dependency Dataset Library for PyTorch
 
-Bachelor Project — DFKI (German Research Center for Artificial Intelligence) | SS 2026
+**Lightweight experimental data-loading library for PyTorch, developed as part of a Bachelor Project at DFKI.**
 
-## Project Description
+[![PyPI](https://img.shields.io/pypi/v/minimal-dataset-pytorch.svg)](https://pypi.org/project/minimal-dataset-pytorch/)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-supported-ee4c2c.svg)](https://pytorch.org/)
 
-Training large deep learning models on GPU clusters requires efficient data pipelines. When datasets reside on remote network storage, loading and preprocessing can become the primary bottleneck, leaving expensive GPUs underutilized. Existing solutions (WebDataset, MosaicML StreamingDataset, TFRecord) often require extensive dependencies and major changes to training code.
+## Features
 
-The goal of this project is to analyse performance bottlenecks in the data loading pipeline, then design and implement a simple library for storing and loading training data from a remote storage server. The library should be minimal — relying only on PyTorch and the Python standard library — while supporting multi-threaded loading, lock-free sampling, distributed training (DDP), and built-in instrumentation for performance profiling.
+- Parquet-backed image datasets
+- Multi-threaded data loading
+- Lock-free sample distribution
+- Chunked staging and batch processing
+- Built-in performance instrumentation
+- Compatible with standard PyTorch training loops
 
-## Project Goals & Status
+## Installation
 
-| # | Goal | Status |
-|---|------|--------|
-| 1 | Train baseline model + profile data loading bottlenecks | Done |
-| 2 | Benchmark GPU compute delays across 10 GPU types (3,540 runs) | Done |
-| 3 | Build GPU simulator (Dummy Model) for GPU-free testing | Done |
-| 4 | Evaluate 6 storage formats for throughput, overhead, thread safety | Done |
-| 5 | Implement multi-threaded DataLoader with lock-free sampler | Done |
-| 6 | Add built-in instrumentation (MonitoredQueue + MetricsTracker) | Done |
-| 7 | Run benchmark sweep: 9 batch sizes × 6 worker counts, 100k images | Done |
-| 8 | Compare against PyTorch DataLoader on same hardware/data | Done |
+Install directly from PyPI:
 
-## Key Results
+```bash
+pip install minimal-dataset-pytorch
+```
 
-### Storage Format Evaluation (100k images, tiny-imagenet, fscratch SSD)
+### Dependencies
 
-| Format | Sequential (img/s) | Random (img/s) | Overhead | Thread-Safe |
-|--------|-------------------|----------------|----------|-------------|
-| Parquet | 472.7 | 473.7 | -0.3% | Yes |
-| MessagePack | 431.4 | 312.9 | 0.0% | Conditional |
-| Tar | 424.1 | N/A | 1.5% | Sequential only |
-| LMDB | 415.8 | 304.7 | 1.8% | Yes |
-| Zip | 341.5 | 233.2 | 0.1% | No |
-| Plain JPEG | 266.6 | 255.9 | 0% | Yes |
+The package directly depends on:
 
-### DataLoader Performance (Parquet, A100 CPU node, 100k images)
+- `torch`
+- `torchvision`
+- `pyarrow`
+- `Pillow`
 
-| Metric | Our DataLoader | PyTorch DataLoader |
-|--------|---------------|-------------------|
-| Peak Throughput | 1,787 samples/s (BS=512, 16w) | 2,865 samples/s (BS=512, 32w) |
-| Optimal Workers | 16 | 32 |
-| Scaling 1-16 workers | 6.5x | 9.8x |
-| Scaling 16-32 workers | Degrades (-10%) | Continues (+8%) |
-| Memory | 14-17 GB | 16 GB |
-| Dependencies | stdlib + torch | PyTorch only (stdli + torch)|
+Additional platform-specific dependencies required by PyTorch are installed automatically by `pip`.
 
-### GPU Compute Delays (ResNet-50, batch_size=256, SGD)
+`ParquetDataset` uses `torchvision.io` for JPEG decoding. Pillow is currently only used by `BaseDataset`.
 
-| GPU | Avg Delay (ms) | Models Tested |
-|-----|---------------|---------------|
-| H200 | 522 | 15 |
-| H100 | 597 | 15 |
-| RTXB6000 | 537 | 15 |
-| L40S | 663 | 11 |
-| A100-40GB | 702 | 9 |
-| B200 | 711 | 16 |
-| RTXA6000 | 1,042 | 9 |
+## Quick Start
 
-## Repository Structure
+```python
+from minimal_dataset import ParquetDataset, DataLoader
 
-bachelor-project/                                                                                                                                                                                                                                                             
-├── minimal_dataset/ # Library module                                                                                                                                                                                                                                        
-│ ├── init.py # Public API                                                                                                                                                                                                                                                
-│ ├── dataset.py # BaseDataset (ImageFolder reader)                                                                                                                                                                                              
-│ ├── parquet_dataset.py # ParquetDataset (Parquet reader)                                                                                                                                         
-│ ├── sampler.py # LockFreeSampler (lock-free index partitioning)                                                                                                                                                  
-│ ├── dataloader.py # DataLoader (multi-threaded, staging + batch queues)                                                                                                                                                  
-│ ├── monitored_queue.py # MonitoredQueue (queue instrumentation)                                                                                                                  
-│ └── metrics.py # MetricsTracker + WorkerMetrics                                                                                                                                                                                                  
-├── benchmarks/                                                                                                                                                                                                                
-│ ├── gpu/ # GPU benchmarking & dummy model                                                                                                                                                              
-│ │ ├── benchmark_gpu.py                                                                                                                                                                                                                              
-│ │ ├── calibrate_dummy.py                                                                                                                                                                                                         
-│ │ ├── dummy_model.py                                                                                                                                                                                                                      
-│ │ ├── build_delay_config.py                                                                                                                                                                                                                  
-│ │ └── gpu_delays.json                                                                                                                                                                               
-│ └── storage/ # Storage format evaluation                                                                                                                                                                                                                           
-│ ├── benchmark_plain.py                                                                                                                                                                                       
-│ ├── benchmark_zip.py                                                                                                                                                                                                                                 
-│ ├── benchmark_tar.py                                                                                                                                                                                       
-│ ├── benchmark_lmdb.py                                                                                                                                                           
-│ ├── benchmark_parquet.py                                                                                                                                                                                                         
-│ ├── benchmark_msgpack.py                                                                                                                                                                                                     
-│ └── file_io.py                                                                                                                                                                                       
-├── tests/ # DataLoader tests & benchmarks                                                                                                                                                                                                  
-│ ├── test_dataloader.py                                                                                                                                                                                                                            
-│ ├── benchmark_dataloader.py                                                                                                                                                                                                                                                 
-│ ├── benchmark_pytorch.py                                                                                                                                                                                                                                                   
-│ ├── plot_comparison.py                                                                                                                                                                                                                         
-│ └── launch_full_benchmark.sh                                                                                                                                                                                                         
-├── training/ # ResNet training scripts                                                                                                                                                                                                                            
-│ ├── train_resnet50.py                                                                                                                                                                                                                                   
-│ ├── train_resnet50_ddp.py                                                                                                                                                                                                     
-│ └── analyze_dataloading.py                                                                                                                                                                                                                           
-├── docs/                                                                                                                                                                                                                                                  
-│ ├── images/ # Architecture diagrams & benchmark plots                                                                                                                                                                                                                  
-│ │ ├── 00_MainOverview1.png                                                                                                                                                                                                                      
-│ │ ├── 02_dataLoader1.png                                                                                                                                                                                                                                                    
-│ │ ├── 04_Storage Format Evaluation.png                                                                                                                                                                                            
-│ │ ├── 05_GPU Compute Delay.png                                                                                                                                                                                                                
-│ │ ├── plot_ours_throughput.png                                                                                                                                                                                                                           
-│ │ ├── plot_pytorch_throughput.png                                                                                                                                                                                                                    
-│ │ ├── plot_comparison_bs16.png                                                                                                                                                                                                                        
-│ │ └── plot_speedup_comparison.png                                                                                                                                                                                                              
-│ └── architecture.md                                                                                                                                                                       
-└── README.md                                                                                                                 
+dataset = ParquetDataset("images.parquet")
+
+loader = DataLoader(
+    dataset,
+    batch_size=256,
+    num_workers=16,
+)
+
+for images, labels in loader:
+    # training step
+    pass
+```
+
+## Performance
+
+The custom DataLoader was benchmarked against `torch.utils.data.DataLoader`
+using the same Parquet dataset and preprocessing pipeline.
+
+| Workers | PyTorch DataLoader | Custom DataLoader |
+|---:|---:|---:|
+| 1 | 439 samples/s | 454 samples/s |
+| 2 | 816 samples/s | 859 samples/s |
+| 4 | 1,342 samples/s | 1,536 samples/s |
+| 8 | 1,709 samples/s | 2,561 samples/s |
+| 16 | 1,388 samples/s | **3,245 samples/s** |
+| 32 | 858 samples/s | 3,100 samples/s |
+
+Peak measured throughput: **3,245 samples/s at 16 workers**.
+
+![PyTorch vs Custom DataLoader](docs/images/parquet/plot_pytorch_vs_ours_current.png)
+
+The final optimizations increased peak throughput from approximately
+**1,517 to 3,245 samples/s**.
+
+![Baseline vs Optimized DataLoader](docs/images/comparison/final_scaling.png)
+
+## Notes
+
+The current Parquet implementation loads the dataset eagerly into memory.
+
+Performance reaches its maximum around 16 workers and slightly decreases at
+32 workers. The remaining scaling bottleneck has been narrowed mainly to the
+concurrent per-sample processing path but has not been fully isolated.
+
+This package is an experimental research prototype and is not intended as a
+production replacement for `torch.utils.data.DataLoader`.
+
+## Author
+
+**Pascal Nague**
+
+Bachelor Project — DFKI  
+Summer Semester 2026
