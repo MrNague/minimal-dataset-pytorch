@@ -2,6 +2,15 @@ name: Publish Python package
 
 on:
   workflow_dispatch:
+    inputs:
+      target:
+        description: "Package index"
+        required: true
+        type: choice
+        options:
+          - testpypi
+          - pypi
+        default: testpypi
 
 jobs:
   build:
@@ -29,6 +38,7 @@ jobs:
           path: dist/
 
   publish-testpypi:
+    if: ${{ inputs.target == 'testpypi' }}
     needs: build
     runs-on: ubuntu-latest
 
@@ -50,3 +60,25 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
+
+  publish-pypi:
+    if: ${{ inputs.target == 'pypi' }}
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: pypi
+      url: https://pypi.org/p/minimal-dataset-pytorch
+
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v6
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
