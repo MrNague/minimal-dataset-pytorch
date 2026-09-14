@@ -59,6 +59,9 @@ for images, labels in loader:
 The custom DataLoader was benchmarked against `torch.utils.data.DataLoader`
 using the same Parquet dataset and preprocessing pipeline.
 
+The benchmark used 9,984 samples, a batch size of 256, worker counts from
+1 to 32, and three repetitions per configuration.
+
 | Workers | PyTorch DataLoader | Custom DataLoader |
 |---:|---:|---:|
 | 1 | 439 samples/s | 454 samples/s |
@@ -82,15 +85,30 @@ The final optimizations increased peak throughput from approximately
 The current Parquet implementation loads the dataset eagerly into memory.
 
 Performance reaches its maximum around 16 workers and slightly decreases at
-32 workers. The remaining scaling bottleneck has been narrowed mainly to the
-concurrent per-sample processing path but has not been fully isolated.
+32 workers. The remaining scaling bottleneck has not been fully isolated.
+Profiling indicates that contention or synchronization within the concurrent
+data-loading pipeline may contribute to the observed saturation.
 
 This package is an experimental research prototype and is not intended as a
 production replacement for `torch.utils.data.DataLoader`.
 
-## Author
+## Repository Structure
 
-**Pascal Nague**
+```text
+minimal_dataset/   Core library distributed through PyPI
+benchmarks/        GPU and storage-format benchmarks
+experiments/       Profiling, scaling, optimization, and alternative implementations
+tests/             Functional tests for the library
+training/          ResNet-50 training scripts
+docs/              Architecture documentation and benchmark figures
+
+The experiments/ directory contains research code developed during the
+Bachelor Project. Experimental implementations, including the multiprocessing
+DataLoader, are not part of the public package API.
+
+Author
+
+Pascal Nague
 
 Bachelor Project — DFKI  
 Summer Semester 2026

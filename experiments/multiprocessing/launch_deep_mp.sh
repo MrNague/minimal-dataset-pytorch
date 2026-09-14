@@ -11,7 +11,7 @@
 source ~/venv/torch_env/bin/activate
 
 for nw in 1 2 4 8 16; do
-    python3 -u ~/bachelor-project/tests/benchmark_deep_mp.py --num-workers ${nw}
+    python3 -u ~/bachelor-project/experiments/multiprocessing/benchmark_deep_mp.py --num-workers ${nw}
 done
 
 echo "DONE"

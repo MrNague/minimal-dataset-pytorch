@@ -9,4 +9,4 @@
 #SBATCH --error=/netscratch/%u/profile_%j.err
 
 source ~/venv/torch_env/bin/activate
-python3 -u ~/bachelor-project/tests/profile_dataloader.py
+python3 -u ~/bachelor-project/experiments/profiling/profile_dataloader.py

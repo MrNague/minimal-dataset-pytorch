@@ -15,7 +15,7 @@ for bs in "${BATCH_SIZES[@]}"; do
 #SBATCH --error=/netscratch/%u/dl_bs${bs}_w${nw}_%j.err
 
 source ~/venv/torch_env/bin/activate
-python3 -u ~/bachelor-project/tests/benchmark_dataloader.py --batch-size ${bs} --num-workers ${nw} --num-samples 500
+python3 -u ~/bachelor-project/experiments/scaling/benchmark_dataloader.py --batch-size ${bs} --num-workers ${nw} --num-samples 500
 INNER
         sbatch /tmp/bench_bs${bs}_w${nw}.sbatch
         echo "Submitted: bs=${bs}, workers=${nw}"

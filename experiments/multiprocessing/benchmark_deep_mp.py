@@ -3,7 +3,8 @@
 import sys, os, time, argparse
 
 sys.path.insert(0, '/home/nague/bachelor-project')
-from minimal_dataset import ParquetDataset, DataLoaderMP
+from minimal_dataset import ParquetDataset
+from dataloader_mp import DataLoaderMP
 
 def parquet_factory():
     return ParquetDataset("/fscratch/nague/storage_benchmarks/images.parquet", max_samples=10000)

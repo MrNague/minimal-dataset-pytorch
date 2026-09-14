@@ -9,4 +9,4 @@
 #SBATCH --error=/netscratch/%u/decode_lock_%j.err
 
 source ~/venv/torch_env/bin/activate
-python3 -u ~/bachelor-project/tests/test_decode_lock.py
+python3 -u ~/bachelor-project/experiments/profiling/test_decode_lock.py

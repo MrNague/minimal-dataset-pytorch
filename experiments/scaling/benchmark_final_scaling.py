@@ -45,11 +45,11 @@ except RuntimeError:
 
 if args.mode == "baseline":
 
-    from minimal_dataset.parquet_dataset_before_final_optimization import (
+    from experiments.legacy.parquet_dataset_before_final_optimization import (
         ParquetDataset,
     )
 
-    from minimal_dataset.dataloader_before_final_optimization import (
+    from experiments.legacy.dataloader_before_final_optimization import (
         DataLoader,
     )
 

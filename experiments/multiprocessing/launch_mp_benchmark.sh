@@ -13,7 +13,7 @@ source ~/venv/torch_env/bin/activate
 echo "type,batch_size,num_workers,batches,time_s,throughput"
 
 for nw in 1 2 4 8 16; do
-    python3 -u ~/bachelor-project/tests/benchmark_mp.py --batch-size 256 --num-workers ${nw}
+    python3 -u ~/bachelor-project/experiments/multiprocessing/benchmark_mp.py --batch-size 256 --num-workers ${nw}
 done
 
 echo "DONE"

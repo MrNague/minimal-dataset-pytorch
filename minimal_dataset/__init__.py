@@ -8,7 +8,6 @@ at DFKI.
 from .dataset import BaseDataset
 from .parquet_dataset import ParquetDataset
 from .dataloader import DataLoader
-from .dataloader_mp import DataLoaderMP
 from .sampler import LockFreeSampler
 from .monitored_queue import MonitoredQueue
 from .metrics import MetricsTracker, WorkerMetrics
@@ -19,7 +18,6 @@ __all__ = [
     "BaseDataset",
     "ParquetDataset",
     "DataLoader",
-    "DataLoaderMP",
     "LockFreeSampler",
     "MonitoredQueue",
     "MetricsTracker",

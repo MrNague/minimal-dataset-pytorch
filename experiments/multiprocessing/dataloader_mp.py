@@ -10,7 +10,7 @@ import os
 
 import torch
 
-from .sampler import LockFreeSampler
+from minimal_dataset.sampler import LockFreeSampler
 
 
 def _default_collate_fn(samples):

@@ -68,7 +68,7 @@ class ImageDataset(Dataset):
         return img, label
 
 
-from minimal_dataset.dataloader_mp import DataLoaderMP
+from dataloader_mp import DataLoaderMP
 
 
 def msgpack_factory():
