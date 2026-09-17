@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Find which GPU/model/batch_size/optimizer combos are missing."""
+"""Find which GPU/model/batch_size/optimizer combos are missing. """
 import os
 
 SUMMARY_DIR = "/netscratch/nague/gpu_benchmarks"
