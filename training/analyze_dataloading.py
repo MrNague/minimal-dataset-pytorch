@@ -12,7 +12,7 @@ import os
 import time
 
 # ============================================================
-# CONFIGURATION (identic to job 3005470 for comparison)
+# CONFIGURATION 
 # ============================================================
 
 DATA_DIR = "/ds-sds/images/imagenet"
